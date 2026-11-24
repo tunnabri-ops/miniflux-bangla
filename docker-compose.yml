@@ -1,0 +1,39 @@
+services:
+  miniflux:
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://miniflux:secret@db/miniflux?sslmode=disable
+      - RUN_MIGRATIONS=1
+      - CREATE_ADMIN=1
+      - ADMIN_USERNAME=admin
+      # CHANGE THIS PASSWORD before first run
+      - ADMIN_PASSWORD=change-me-please
+      - TZ=Asia/Dhaka
+      - POLLING_FREQUENCY=60
+      - POLLING_PARSING_ERROR_LIMIT=3
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: miniflux-db
+    environment:
+      - POSTGRES_USER=miniflux
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=miniflux
+    volumes:
+      - miniflux-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miniflux"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  miniflux-db:
